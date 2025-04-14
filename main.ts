@@ -88,6 +88,10 @@ class DrawingApp {
 	}
 	
 	private pressEventHandler = (e: MouseEvent | TouchEvent) => {
+		let clear = document.getElementById('clear');
+		clear.innerText = "spam";
+	
+	
 		let mouseX = (e as TouchEvent).changedTouches ?
 					 (e as TouchEvent).changedTouches[0].pageX :
 					 (e as MouseEvent).pageX;

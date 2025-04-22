@@ -15,12 +15,8 @@ var DrawingApp = /** @class */ (function () {
             _this.paint = false;
         };
         this.pressEventHandler = function (e) {
-            var mouseX = e.changedTouches ?
-                e.changedTouches[0].pageX :
-                e.pageX;
-            var mouseY = e.changedTouches ?
-                e.changedTouches[0].pageY :
-                e.pageY;
+            var mouseX = e.changedTouches ? e.changedTouches[0].pageX : e.pageX;
+            var mouseY = e.changedTouches ? e.changedTouches[0].pageY : e.pageY;
             mouseX -= _this.canvas.offsetLeft;
             mouseY -= _this.canvas.offsetTop;
             _this.paint = true;
@@ -28,12 +24,8 @@ var DrawingApp = /** @class */ (function () {
             _this.redraw();
         };
         this.dragEventHandler = function (e) {
-            var mouseX = e.changedTouches ?
-                e.changedTouches[0].pageX :
-                e.pageX;
-            var mouseY = e.changedTouches ?
-                e.changedTouches[0].pageY :
-                e.pageY;
+            var mouseX = e.changedTouches ? e.changedTouches[0].pageX : e.pageX;
+            var mouseY = e.changedTouches ? e.changedTouches[0].pageY : e.pageY;
             mouseX -= _this.canvas.offsetLeft;
             mouseY -= _this.canvas.offsetTop;
             if (_this.paint) {
@@ -46,7 +38,7 @@ var DrawingApp = /** @class */ (function () {
         var context = canvas.getContext("2d");
         context.lineCap = 'round';
         context.lineJoin = 'round';
-        context.strokeStyle = 'black';
+        context.strokeStyle = 'coral';
         context.lineWidth = 1;
         this.canvas = canvas;
         this.context = context;
@@ -63,14 +55,13 @@ var DrawingApp = /** @class */ (function () {
         canvas.addEventListener("touchmove", this.dragEventHandler);
         canvas.addEventListener("touchend", this.releaseEventHandler);
         canvas.addEventListener("touchcancel", this.cancelEventHandler);
-        document.getElementById('clear')
-            .addEventListener("click", this.clearEventHandler);
+        document.getElementById('clear').addEventListener("click", this.clearEventHandler);
     };
     DrawingApp.prototype.redraw = function () {
         var clickX = this.clickX;
+        var clickY = this.clickY;
         var context = this.context;
         var clickDrag = this.clickDrag;
-        var clickY = this.clickY;
         for (var i = 0; i < clickX.length; ++i) {
             context.beginPath();
             if (clickDrag[i] && i) {
@@ -90,8 +81,7 @@ var DrawingApp = /** @class */ (function () {
         this.clickDrag.push(dragging);
     };
     DrawingApp.prototype.clearCanvas = function () {
-        this.context
-            .clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.clickX = [];
         this.clickY = [];
         this.clickDrag = [];

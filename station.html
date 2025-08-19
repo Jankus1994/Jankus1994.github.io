@@ -83,6 +83,25 @@
         owner: team
       });
     }
+
+    const scoreAEl = document.getElementById("scoreA");
+    const scoreBEl = document.getElementById("scoreB");
+    db.collection("scores").doc("teams").onSnapshot(doc=>{
+      if(doc.exists){
+        scoreAEl.textContent = doc.data().A.toFixed(1);
+        scoreBEl.textContent = doc.data().B.toFixed(1);
+      }
+    });
+
+    const tableEl = document.getElementById("locationsTable");
+    db.collection("locations").onSnapshot(snapshot=>{
+      tableEl.innerHTML = "";
+      snapshot.forEach(doc=>{
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${doc.id}</td><td>${doc.data().owner}</td>`;
+        tableEl.appendChild(row);
+      });
+    });    
   </script>
 </body>
 </html>

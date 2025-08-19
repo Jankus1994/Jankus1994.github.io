@@ -2,24 +2,36 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8">
-  <title>Stanoviště</title>
+  <title>Control Point</title>
   <style>
     body {
-      font-family: sans-serif;
-      text-align: center;
-      background: #f8f8f8;
-      margin: 0;
-      padding: 40px;
+      font-family: Arial, sans-serif;
+      max-width: 700px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f0f0f0;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
-    h1 { margin-bottom: 20px; }
+    h1, h2 {
+      text-align: center;
+      color: #333;
+    }
     .status {
       margin: 20px 0;
       font-size: 24px;
       font-weight: bold;
+      text-align: center;
+    }
+    #scores {
+      display: flex;
+      justify-content: space-around;
+      font-size: 1.5em;
+      margin-bottom: 30px;
     }
     button {
-      font-size: 20px;
-      padding: 15px 25px;
+      font-size: 18px;
+      padding: 12px 20px;
       margin: 10px;
       border: none;
       border-radius: 8px;
@@ -30,21 +42,45 @@
     .teamA:hover { background: #ffaaaa; }
     .teamB { background: #d4e9ff; }
     .teamB:hover { background: #a8d0ff; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      text-align: center;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ccc;
+    }
+    .owner-A { background-color: #ffdddd; }
+    .owner-B { background-color: #ddddff; }
+    .owner-neutral { background-color: #eeeeee; }
   </style>
 </head>
 <body>
-  <h1 id="stationName">Stanoviště</h1>
+  <h1 id="cpName">Control Point</h1>
   <p class="status">Ovládá: <span id="owner">-</span></p>
+  <div style="text-align:center;">
+    <button class="teamA" onclick="setOwner('A')">Předat Týmu A</button>
+    <button class="teamB" onclick="setOwner('B')">Předat Týmu B</button>
+  </div>
 
-  <button class="teamA" onclick="setOwner('A')">Předat Týmu A</button>
-  <button class="teamB" onclick="setOwner('B')">Předat Týmu B</button>
+  <h2>Skóre týmů</h2>
+  <div id="scores">
+    <div>Team A: <span id="scoreA">0.0</span></div>
+    <div>Team B: <span id="scoreB">0.0</span></div>
+  </div>
+
+  <h2>Stav všech Control Pointů</h2>
+  <table id="locationsTable">
+    <tr><th>ID</th><th>Vlastník</th></tr>
+  </table>
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
   <script>
-    // 🔑 Vlož sem svůj config z Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyDOEonHWXYZU5bYuETpI_6bk7oIVyHQP1Q",
         authDomain: "domination-game-c1426.firebaseapp.com",
@@ -53,39 +89,38 @@
         messagingSenderId: "630646319",
         appId: "1:630646319:web:8ef916ac9c10ca071a48da"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // ⏩ Získáme ID stanoviště z URL (např. station.html?id=loc1)
+    // Získáme ID CP z URL (např. cp.html?id=cp1)
     const urlParams = new URLSearchParams(window.location.search);
-    const stationId = urlParams.get("id");
+    const cpId = urlParams.get("id");
 
-    const nameEl = document.getElementById("stationName");
+    const nameEl = document.getElementById("cpName");
     const ownerEl = document.getElementById("owner");
+    const scoreAEl = document.getElementById("scoreA");
+    const scoreBEl = document.getElementById("scoreB");
+    const tableEl = document.getElementById("locationsTable");
 
-    // Realtime listener pro konkrétní dokument
-    db.collection("locations").doc(stationId).onSnapshot(doc => {
-      if (doc.exists) {
+    // Listener pro konkrétní CP
+    db.collection("locations").doc(cpId).onSnapshot(doc => {
+      if(doc.exists){
         const data = doc.data();
         nameEl.textContent = data.name;
         ownerEl.textContent = data.owner === "A" ? "Tým A" :
                               data.owner === "B" ? "Tým B" : "-";
       } else {
-        nameEl.textContent = "Neznámé stanoviště";
+        nameEl.textContent = "Neznámý CP";
         ownerEl.textContent = "-";
       }
     });
 
     // Funkce pro změnu vlastníka
-    function setOwner(team) {
-      db.collection("locations").doc(stationId).update({
-        owner: team
-      });
+    function setOwner(team){
+      db.collection("locations").doc(cpId).update({ owner: team });
     }
 
-    const scoreAEl = document.getElementById("scoreA");
-    const scoreBEl = document.getElementById("scoreB");
+    // Listener pro skóre týmů
     db.collection("scores").doc("teams").onSnapshot(doc=>{
       if(doc.exists){
         scoreAEl.textContent = doc.data().A.toFixed(1);
@@ -93,15 +128,18 @@
       }
     });
 
-    const tableEl = document.getElementById("locationsTable");
+    // Listener pro všechna CP
     db.collection("locations").onSnapshot(snapshot=>{
-      tableEl.innerHTML = "";
+      // zachovat hlavičku
+      tableEl.innerHTML = "<tr><th>ID</th><th>Vlastník</th></tr>";
       snapshot.forEach(doc=>{
         const row = document.createElement("tr");
-        row.innerHTML = `<td>${doc.id}</td><td>${doc.data().owner}</td>`;
+        const owner = doc.data().owner || "neutral";
+        row.className = "owner-" + owner;
+        row.innerHTML = `<td>${doc.id}</td><td>${owner}</td>`;
         tableEl.appendChild(row);
       });
-    });    
+    });
   </script>
 </body>
 </html>

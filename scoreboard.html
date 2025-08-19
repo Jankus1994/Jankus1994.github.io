@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<title>Domination Game - Scoreboard</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 20px;
+  background: #f0f0f0;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+h1 {
+  text-align: center;
+  color: #333;
+}
+#scores {
+  display: flex;
+  justify-content: space-around;
+  font-size: 1.5em;
+  margin-bottom: 30px;
+}
+#locations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.location {
+  flex: 1 1 120px;
+  padding: 10px;
+  background: white;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: bold;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.owner-A { background-color: #ffdddd; }
+.owner-B { background-color: #ddddff; }
+.owner-neutral { background-color: #eeeeee; }
+</style>
+</head>
+<body>
+<h1>Domination Game - Scoreboard</h1>
+
+<div id="scores">
+  <div>Team A: <span id="scoreA">0.0</span></div>
+  <div>Team B: <span id="scoreB">0.0</span></div>
+</div>
+
+<div id="locations"></div>
+
+<script>
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyDOEonHWXYZU5bYuETpI_6bk7oIVyHQP1Q",
+    authDomain: "domination-game-c1426.firebaseapp.com",
+    projectId: "domination-game-c1426",
+    storageBucket: "domination-game-c1426.firebasestorage.app",
+    messagingSenderId: "630646319",
+    appId: "1:630646319:web:8ef916ac9c10ca071a48da"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  let divider = 1;
+
+  const scoreAEl = document.getElementById("scoreA");
+  const scoreBEl = document.getElementById("scoreB");
+  const locationsEl = document.getElementById("locations");
+
+  // Listener pro stav hry a divider
+  db.collection("game").doc("state").onSnapshot(doc => {
+    const data = doc.data();
+    if (data) {
+      divider = data.divider || 1;
+    }
+  });
+
+  // Listener pro lokace
+  db.collection("locations").onSnapshot(snapshot => {
+    locationsEl.innerHTML = "";
+    snapshot.forEach(doc => {
+      const loc = doc.data();
+      const div = document.createElement("div");
+      div.className = "location owner-" + (loc.owner || "neutral");
+      div.textContent = loc.name + ": " + (loc.owner || "neutral");
+      locationsEl.appendChild(div);
+    });
+  });
+
+  // Funkce přičítání bodů každou sekundu
+  setInterval(async () => {
+    const gameStateDoc = await db.collection("game").doc("state").get();
+    if (!gameStateDoc.exists) return;
+    const gameState = gameStateDoc.data();
+    if (gameState.status !== "running") return;
+
+    const scoresRef = db.collection("scores").doc("teams");
+    const scoresSnap = await scoresRef.get();
+    let scores = scoresSnap.exists ? scoresSnap.data() : { A:0, B:0 };
+
+    const locationsSnap = await db.collection("locations").get();
+    let addA = 0, addB = 0;
+    locationsSnap.forEach(doc => {
+      const owner = doc.data().owner;
+      if(owner === "A") addA++;
+      if(owner === "B") addB++;
+    });
+
+    await scoresRef.update({
+      A: scores.A + addA,
+      B: scores.B + addB
+    });
+
+    // Zobrazit skóre s dividerem
+    scoreAEl.textContent = ((scores.A + addA)/divider).toFixed(1);
+    scoreBEl.textContent = ((scores.B + addB)/divider).toFixed(1);
+  }, 1000);
+</script>
+</body>
+</html>

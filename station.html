@@ -123,8 +123,8 @@
     // Listener pro skóre týmů
     db.collection("scores").doc("teams").onSnapshot(doc=>{
       if(doc.exists){
-        scoreAEl.textContent = doc.data().A.toFixed(1);
-        scoreBEl.textContent = doc.data().B.toFixed(1);
+        scoreAEl.textContent = (doc.data().A/divider).toFixed(1);
+        scoreBEl.textContent = (doc.data().B/divider).toFixed(1);        
       }
     });
 

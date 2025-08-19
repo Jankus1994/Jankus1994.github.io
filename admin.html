@@ -42,43 +42,34 @@
 
     // funkce
     function startGame() {
-      db.collection("game").doc("state").set(
-        { status: "running" }, 
-        { merge: true } // ← vytvoří dokument, pokud není
-      );
+      db.collection("game").doc("state").update({ status: "running" });
     }
-
     function stopGame() {
-      db.collection("game").doc("state").set(
-        { status: "stopped" },
-        { merge: true }
-      );
+      db.collection("game").doc("state").update({ status: "stopped" });
     }
-
     function resetGame() {
       db.collection("scores").doc("teams").set({ A: 0, B: 0 });
       db.collection("locations").get().then(snapshot => {
         snapshot.forEach(doc => {
-          db.collection("locations").doc(doc.id).set(
-            { owner: "neutral" }, 
-            { merge: true }
-          );
+          db.collection("locations").doc(doc.id).update({ owner: "neutral" });
         });
       });
-      db.collection("game").doc("state").set(
-        { status: "stopped", divider: 1 },
-        { merge: true }
-      );
+      db.collection("game").doc("state").update({ status: "stopped" });
     }
-
     function updateDivider() {
       const divider = parseInt(document.getElementById("divider").value) || 1;
-      db.collection("game").doc("state").set(
-        { divider: divider },
-        { merge: true }
-      );
+      db.collection("game").doc("state").update({ divider: divider });
     }
 
+    // stav hry
+    db.collection("game").doc("state").onSnapshot(doc => {
+      if (doc.exists) {
+        const state = doc.data();
+        const statusText = state.status === "running" ? "Spuštěná" : "Zastavená";
+        document.getElementById("gameStatus").innerText = `${statusText} (dělitel: ${state.divider ?? 1})`;
+        document.getElementById("divider").value = state.divider ?? 1;
+      }
+    });
   </script>
 </body>
 </html>

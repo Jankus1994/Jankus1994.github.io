@@ -120,11 +120,17 @@
       db.collection("locations").doc(cpId).update({ owner: team });
     }
 
-    // Listener pro skóre týmů
+    // Listener na stav hry pro divider
+    db.collection("game").doc("state").onSnapshot(doc => {
+      const data = doc.data();
+      if (data && data.divider) divider = data.divider;
+    });
+
+    // Listener pro skóre týmů s dělením
     db.collection("scores").doc("teams").onSnapshot(doc=>{
       if(doc.exists){
-        scoreAEl.textContent = (doc.data().A/doc.data().divider).toFixed(1);
-        scoreBEl.textContent = (doc.data().B/doc.data().divider).toFixed(1);        
+        scoreAEl.textContent = (doc.data().A / divider).toFixed(1);
+        scoreBEl.textContent = (doc.data().B / divider).toFixed(1);
       }
     });
 

@@ -1,197 +1,165 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8" />
-  <title>Domination Game – Stanoviště</title>
-
-  <!-- Firebase COMPAT SDK (stejné jako na admin/scoreboard) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
+  <meta charset="UTF-8">
+  <title>Stanoviště</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
   <style>
-    :root {
-      --bg: #f4f7fb;
-      --card: #ffffff;
-      --text: #222;
-      --muted: #6a6f78;
-      --primary: #2563eb;
-      --primary-hover: #1d4ed8;
-      --danger: #ef4444;
-      --danger-hover: #dc2626;
-      --neutral: #6b7280;
-      --shadow: 0 6px 18px rgba(0,0,0,0.08);
-      --radius: 14px;
-    }
-    * { box-sizing: border-box; }
     body {
-      margin: 0; padding: 0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-      color: var(--text);
-      background: var(--bg);
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f4f4f4;
+      color: #333;
     }
-    .nav {
-      background: var(--card);
-      box-shadow: var(--shadow);
-      padding: 14px 20px;
-      display: flex; align-items: center; justify-content: space-between;
-      position: sticky; top: 0; z-index: 10;
+    h1, h2 {
+      text-align: center;
     }
-    .nav .brand { font-weight: 800; letter-spacing: 0.5px; }
-    .nav a {
-      color: var(--primary); text-decoration: none; margin-left: 14px; font-weight: 600;
+    #station-info {
+      font-size: 1.2em;
+      margin: 10px 0;
+      text-align: center;
     }
-    .container { max-width: 900px; margin: 26px auto; padding: 0 16px; }
-    .card {
-      background: var(--card); border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 18px; margin-bottom: 18px;
+    button {
+      margin: 5px;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background-color: #007BFF;
+      color: white;
+      font-size: 1em;
     }
-    h1, h2 { margin: 0 0 12px 0; }
-    .muted { color: var(--muted); }
-
-    .btns { display: flex; gap: 10px; flex-wrap: wrap; }
-    .btn {
-      border: 0; border-radius: 10px; padding: 10px 14px; cursor: pointer;
-      font-weight: 700; box-shadow: var(--shadow);
-      background: var(--neutral); color: #fff;
-      transition: transform .04s ease, filter .2s ease;
+    button:hover {
+      background-color: #0056b3;
     }
-    .btn:active { transform: translateY(1px); }
-    .btn.primary { background: var(--primary); }
-    .btn.primary:hover { background: var(--primary-hover); }
-    .btn.danger { background: var(--danger); }
-    .btn.danger:hover { background: var(--danger-hover); }
-
-    .scores {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: center;
-      font-size: 1.6rem; font-weight: 800;
+    .scoreboard {
+      background: white;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 20px auto;
+      max-width: 400px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
-    .scores .label { display: block; font-size: .9rem; font-weight: 600; color: var(--muted); }
-
-    .grid {
-      display: grid; gap: 10px;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    ul {
+      list-style: none;
+      padding: 0;
     }
-    .tile {
-      background: #fff; border-radius: 12px; padding: 12px;
-      box-shadow: var(--shadow); font-weight: 700; text-align: center;
+    li {
+      background: white;
+      margin: 5px 0;
+      padding: 8px;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
-    .owner-A { background: #ffe1e1; }
-    .owner-B { background: #e1e6ff; }
-    .owner-neutral { background: #eef1f5; }
-    .kicker { font-size: .9rem; color: var(--muted); margin-top: 6px; }
   </style>
 </head>
 <body>
-  <div class="nav">
-    <div class="brand">Domination Game</div>
-    <div>
-      <a href="scoreboard.html">Scoreboard</a>
-      <a href="admin.html">Admin</a>
-    </div>
+  <h1>Stanoviště</h1>
+  <div id="station-info"></div>
+  <div style="text-align: center;">
+    <button onclick="setOwner('A')">Přiřadit tým A</button>
+    <button onclick="setOwner('B')">Přiřadit tým B</button>
+    <button onclick="setOwner('neutral')">Nastavit neutrální</button>
   </div>
 
-  <div class="container">
-    <!-- Panel aktuálního stanoviště -->
-    <div class="card">
-      <h1>Stanoviště <span id="stationId" class="muted"></span></h1>
-      <div class="kicker" id="stationOwner">Načítám…</div>
-      <div class="btns" style="margin-top:12px">
-        <button class="btn primary" onclick="setOwner('A')">Přiřadit tým A</button>
-        <button class="btn danger"  onclick="setOwner('B')">Přiřadit tým B</button>
-        <button class="btn"         onclick="setOwner('neutral')">Nastavit neutrální</button>
-      </div>
-    </div>
+  <div class="scoreboard">
+    <h2>Skóre</h2>
+    <p>Tým A: <span id="scoreA">0</span></p>
+    <p>Tým B: <span id="scoreB">0</span></p>
+    <p>Hra: <span id="gameStatus">Načítám…</span></p>
+  </div>
 
-    <!-- Skóre + stav hry -->
-    <div class="card">
-      <h2>Přehled</h2>
-      <div class="kicker" id="gameStatus">Hra: načítám…</div>
-      <div class="scores" style="margin-top:12px">
-        <div>
-          <span class="label">Tým A</span>
-          <span id="scoreA">0.0</span>
-        </div>
-        <div>
-          <span class="label">Tým B</span>
-          <span id="scoreB">0.0</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Všechna stanoviště -->
-    <div class="card">
-      <h2>Stanoviště</h2>
-      <div class="grid" id="locationsGrid"></div>
-    </div>
+  <div class="scoreboard">
+    <h2>Stanoviště</h2>
+    <ul id="locationsList"></ul>
   </div>
 
   <script>
-    // === Firebase config – doplň své hodnoty ===
+    // --- Firebase config ---
     const firebaseConfig = {
-      apiKey: "AIzaSyDOEonHWXYZU5bYuETpI_6bk7oIVyHQP1Q",
-      authDomain: "domination-game-c1426.firebaseapp.com",
-      projectId: "domination-game-c1426",
-      storageBucket: "domination-game-c1426.firebasestorage.app",
-      messagingSenderId: "630646319",
-      appId: "1:630646319:web:8ef916ac9c10ca071a48da"
+      apiKey: "TVŮJ_API_KEY",
+      authDomain: "domination-game.firebaseapp.com",
+      projectId: "domination-game",
+      storageBucket: "domination-game.appspot.com",
+      messagingSenderId: "TVŮJ_ID",
+      appId: "TVŮJ_APP_ID"
     };
-    firebase.initializeApp(firebaseConfig);
+
+    const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // === ID stanoviště z URL ?id=stanoviste1 ===
-    const params = new URLSearchParams(location.search);
-    const stationId = params.get("id") || "stanoviste1";
-    document.getElementById("stationId").textContent = stationId;
+    // --- Zjištění id stanoviště z URL ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const stationId = urlParams.get("id");
 
-    // === Změna vlastníka aktuálního stanoviště ===
-    async function setOwner(owner) {
-      await db.collection("locations").doc(stationId).set({ owner }, { merge: true });
+    const stationInfo = document.getElementById("station-info");
+
+    // --- Funkce pro změnu vlastníka ---
+    function setOwner(owner) {
+      db.collection("locations").doc(stationId).set({ owner: owner }, { merge: true });
     }
 
-    // === Lokální stav dělitele pro přepočet skóre ===
-    let divider = 1;
-
-    // === Stav hry (status + divider) ===
-    db.collection("game").doc("state").onSnapshot(doc => {
-      if (!doc.exists) return;
-      const state = doc.data();
-      divider = state.divider ?? 1;
-      const statusText = state.status === "running" ? "Spuštěná" : "Zastavená";
-      document.getElementById("gameStatus").textContent = `Hra: ${statusText} (dělitel: ${divider})`;
-    });
-
-    // === Skóre (zobrazené už dělené dividerem) ===
-    db.collection("scores").doc("teams").onSnapshot(doc => {
-      if (!doc.exists) return;
-      const s = doc.data();
-      document.getElementById("scoreA").textContent = ((s.A ?? 0) / divider).toFixed(1);
-      document.getElementById("scoreB").textContent = ((s.B ?? 0) / divider).toFixed(1);
-    });
-
-    // === Aktuální stanoviště (jen info o ownerovi) ===
+    // --- Posluchač na aktuální stanoviště ---
     db.collection("locations").doc(stationId).onSnapshot(doc => {
-      if (!doc.exists) {
-        document.getElementById("stationOwner").textContent = "Stanoviště neexistuje.";
-        return;
+      if (doc.exists) {
+        stationInfo.innerText = `Stanoviště ${stationId} ovládá: ${doc.data().owner}`;
+      } else {
+        stationInfo.innerText = `Stanoviště ${stationId} neexistuje`;
       }
-      const owner = doc.data().owner || "neutral";
-      document.getElementById("stationOwner").textContent = `Ovládá: ${owner}`;
     });
 
-    // === Výpis všech stanovišť ===
-    db.collection("locations").onSnapshot(snap => {
-      const grid = document.getElementById("locationsGrid");
-      grid.innerHTML = "";
-      snap.forEach(d => {
-        const data = d.data();
-        const owner = data.owner || "neutral";
-        const el = document.createElement("div");
-        el.className = `tile owner-${owner}`;
-        el.textContent = `${d.id}: ${owner}`;
-        grid.appendChild(el);
+    // --- Skóre ---
+    db.collection("scores").doc("teams").onSnapshot(doc => {
+      if (doc.exists) {
+        const scores = doc.data();
+        db.collection("game").doc("state").get().then(stateDoc => {
+          const divider = stateDoc.exists ? (stateDoc.data().divider ?? 1) : 1;
+          document.getElementById("scoreA").innerText = (scores.A / divider).toFixed(1);
+          document.getElementById("scoreB").innerText = (scores.B / divider).toFixed(1);
+        });
+      }
+    });
+
+    // --- Stav hry ---
+    db.collection("game").doc("state").onSnapshot(doc => {
+      if (doc.exists) {
+        const state = doc.data();
+        const statusText = state.status === "running" ? "Spuštěná" : "Zastavená";
+        document.getElementById("gameStatus").innerText = `${statusText} (dělitel: ${state.divider ?? 1})`;
+      }
+    });
+
+    // --- Výpis všech stanovišť ---
+    db.collection("locations").onSnapshot(snapshot => {
+      const list = document.getElementById("locationsList");
+      list.innerHTML = "";
+      snapshot.forEach(doc => {
+        const li = document.createElement("li");
+        li.innerText = `${doc.id}: ${doc.data().owner}`;
+        list.appendChild(li);
       });
     });
+
+  // Listener pro stav hry a divider
+  db.collection("game").doc("state").onSnapshot(doc => {
+    const data = doc.data();
+    if (data) {
+      divider = data.divider || 1;
+    }
+  });
+
+  // Listener pro lokace
+  db.collection("locations").onSnapshot(snapshot => {
+    locationsEl.innerHTML = "";
+    snapshot.forEach(doc => {
+      const loc = doc.data();
+      const div = document.createElement("div");
+      div.className = "location owner-" + (loc.owner || "neutral");
+      div.textContent = loc.name + ": " + (loc.owner || "neutral");
+      locationsEl.appendChild(div);
+    });
+  });    
   </script>
 </body>
 </html>

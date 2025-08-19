@@ -1,75 +1,126 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8">
-  <title>Admin Panel</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
+<meta charset="UTF-8">
+<title>Domination Game - Admin</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+h1 {
+  text-align: center;
+  color: #333;
+}
+div {
+  margin-bottom: 15px;
+}
+label {
+  font-weight: bold;
+  margin-right: 10px;
+}
+input[type="number"] {
+  width: 60px;
+  padding: 5px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+button {
+  margin-right: 10px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background-color: #007bff;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+button:hover {
+  background-color: #0056b3;
+}
+#gameStatus {
+  font-weight: bold;
+  font-size: 1.2em;
+  margin-bottom: 20px;
+}
+</style>
 </head>
 <body>
-  <div class="container">
-    <h1>Admin Panel</h1>
+<h1>Admin - Domination Game</h1>
 
-    <div class="card">
-      <h2>Ovládání hry</h2>
-      <p>Stav hry: <span id="gameStatus">Načítám…</span></p>
-      <button onclick="startGame()">Spustit hru</button>
-      <button onclick="stopGame()">Zastavit hru</button>
-      <button onclick="resetGame()">Resetovat hru</button>
-    </div>
+<p>Aktuální stav hry: <span id="gameStatus">načítám...</span></p>
 
-    <div class="card">
-      <h2>Nastavení</h2>
-      <label for="divider">Dělitel bodů:</label>
-      <input type="number" id="divider" value="1" min="1">
-      <button onclick="updateDivider()">Nastavit</button>
-    </div>
-  </div>
+<div>
+  <label for="dividerInput">Dělitel pro bodování:</label>
+  <input type="number" id="dividerInput" value="1" min="1">
+</div>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyDOEonHWXYZU5bYuETpI_6bk7oIVyHQP1Q",
-      authDomain: "domination-game-c1426.firebaseapp.com",
-      projectId: "domination-game-c1426",
-      storageBucket: "domination-game-c1426.firebasestorage.app",
-      messagingSenderId: "630646319",
-      appId: "1:630646319:web:8ef916ac9c10ca071a48da"
-    };
+<button id="startBtn">Spustit hru</button>
+<button id="stopBtn">Zastavit hru</button>
+<button id="resetBtn">Reset skóre a stanovišť</button>
 
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+<script>
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyDOEonHWXYZU5bYuETpI_6bk7oIVyHQP1Q",
+    authDomain: "domination-game-c1426.firebaseapp.com",
+    projectId: "domination-game-c1426",
+    storageBucket: "domination-game-c1426.firebasestorage.app",
+    messagingSenderId: "630646319",
+    appId: "1:630646319:web:8ef916ac9c10ca071a48da"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
 
-    // funkce
-    function startGame() {
-      db.collection("game").doc("state").update({ status: "running" });
+  const dividerInput = document.getElementById("dividerInput");
+  const startBtn = document.getElementById("startBtn");
+  const stopBtn = document.getElementById("stopBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const gameStatusSpan = document.getElementById("gameStatus");
+
+  // Listener pro aktuální stav hry
+  db.collection("game").doc("state").onSnapshot(doc => {
+    const data = doc.data();
+    if(data) {
+      gameStatusSpan.textContent = data.status || "neznámý";
+      dividerInput.value = data.divider || 1;
     }
-    function stopGame() {
-      db.collection("game").doc("state").update({ status: "stopped" });
-    }
-    function resetGame() {
-      db.collection("scores").doc("teams").set({ A: 0, B: 0 });
-      db.collection("locations").get().then(snapshot => {
-        snapshot.forEach(doc => {
-          db.collection("locations").doc(doc.id).update({ owner: "neutral" });
-        });
-      });
-      db.collection("game").doc("state").update({ status: "stopped" });
-    }
-    function updateDivider() {
-      const divider = parseInt(document.getElementById("divider").value) || 1;
-      db.collection("game").doc("state").update({ divider: divider });
-    }
+  });
 
-    // stav hry
-    db.collection("game").doc("state").onSnapshot(doc => {
-      if (doc.exists) {
-        const state = doc.data();
-        const statusText = state.status === "running" ? "Spuštěná" : "Zastavená";
-        document.getElementById("gameStatus").innerText = `${statusText} (dělitel: ${state.divider ?? 1})`;
-        document.getElementById("divider").value = state.divider ?? 1;
-      }
+  startBtn.addEventListener("click", async () => {
+    await db.collection("game").doc("state").set({
+      status: "running",
+      divider: parseInt(dividerInput.value) || 1
+    }, { merge: true });
+    console.log("Hra spuštěna");
+  });
+
+  stopBtn.addEventListener("click", async () => {
+    await db.collection("game").doc("state").set({
+      status: "stopped"
+    }, { merge: true });
+    console.log("Hra zastavena");
+  });
+
+  resetBtn.addEventListener("click", async () => {
+    await db.collection("scores").doc("teams").set({ A:0, B:0 });
+    const locs = await db.collection("locations").get();
+    locs.forEach(async doc => {
+      await db.collection("locations").doc(doc.id).set({ owner: "neutral" }, { merge: true });
     });
-  </script>
+    await db.collection("game").doc("state").set({
+      status: "stopped",
+      divider: parseInt(dividerInput.value) || 1
+    }, { merge: true });
+    console.log("Hra resetována");
+  });
+</script>
 </body>
 </html>

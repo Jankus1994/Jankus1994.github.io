@@ -3,89 +3,86 @@
 <head>
   <meta charset="UTF-8">
   <title>Stanoviště</title>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background: #f8f8f8;
+      margin: 0;
+      padding: 40px;
+    }
+    h1 { margin-bottom: 20px; }
+    .status {
+      margin: 20px 0;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    button {
+      font-size: 20px;
+      padding: 15px 25px;
+      margin: 10px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .teamA { background: #d4e9ff; }
+    .teamA:hover { background: #a8d0ff; }
+    .teamB { background: #ffd4d4; }
+    .teamB:hover { background: #ffaaaa; }
+  </style>
 </head>
 <body>
-  <h1>Stanoviště</h1>
-  <div id="station-info"></div>
-  <button onclick="setOwner('A')">Přiřadit tým A</button>
-  <button onclick="setOwner('B')">Přiřadit tým B</button>
-  <button onclick="setOwner('neutral')">Nastavit neutrální</button>
+  <h1 id="stationName">Stanoviště</h1>
+  <p class="status">Ovládá: <span id="owner">-</span></p>
 
-  <h2>Skóre</h2>
-  <p>Tým A: <span id="scoreA">0</span></p>
-  <p>Tým B: <span id="scoreB">0</span></p>
-  <p>Hra: <span id="gameStatus">Načítám…</span></p>
+  <button class="teamA" onclick="setOwner('A')">Předat Týmu A</button>
+  <button class="teamB" onclick="setOwner('B')">Předat Týmu B</button>
 
-  <h2>Stanoviště</h2>
-  <ul id="locationsList"></ul>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
   <script>
-    // --- Firebase config ---
+    // 🔑 Vlož sem svůj config z Firebase
     const firebaseConfig = {
-      apiKey: "AIzaSyDOEonHWXYZU5bYuETpI_6bk7oIVyHQP1Q",
-      authDomain: "domination-game-c1426.firebaseapp.com",
-      projectId: "domination-game-c1426",
-      storageBucket: "domination-game-c1426.firebasestorage.app",
-      messagingSenderId: "630646319",
-      appId: "1:630646319:web:8ef916ac9c10ca071a48da"
+        apiKey: "AIzaSyDOEonHWXYZU5bYuETpI_6bk7oIVyHQP1Q",
+        authDomain: "domination-game-c1426.firebaseapp.com",
+        projectId: "domination-game-c1426",
+        storageBucket: "domination-game-c1426.firebasestorage.app",
+        messagingSenderId: "630646319",
+        appId: "1:630646319:web:8ef916ac9c10ca071a48da"
     };
 
-    const app = firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // --- Zjištění id stanoviště z URL ---
+    // ⏩ Získáme ID stanoviště z URL (např. station.html?id=loc1)
     const urlParams = new URLSearchParams(window.location.search);
     const stationId = urlParams.get("id");
 
-    const stationInfo = document.getElementById("station-info");
+    const nameEl = document.getElementById("stationName");
+    const ownerEl = document.getElementById("owner");
 
-    // --- Funkce pro změnu vlastníka ---
-    function setOwner(owner) {
-      db.collection("locations").doc(stationId).set({ owner: owner }, { merge: true });
-    }
-
-    // --- Posluchač na aktuální stanoviště ---
+    // Realtime listener pro konkrétní dokument
     db.collection("locations").doc(stationId).onSnapshot(doc => {
       if (doc.exists) {
-        stationInfo.innerText = `Stanoviště ${stationId} ovládá: ${doc.data().owner}`;
+        const data = doc.data();
+        nameEl.textContent = data.name;
+        ownerEl.textContent = data.owner === "A" ? "Tým A" :
+                              data.owner === "B" ? "Tým B" : "-";
       } else {
-        stationInfo.innerText = `Stanoviště ${stationId} neexistuje`;
+        nameEl.textContent = "Neznámé stanoviště";
+        ownerEl.textContent = "-";
       }
     });
 
-    // --- Skóre ---
-    db.collection("scores").doc("teams").onSnapshot(doc => {
-      if (doc.exists) {
-        const scores = doc.data();
-        db.collection("game").doc("state").get().then(stateDoc => {
-          const divider = stateDoc.exists ? (stateDoc.data().divider ?? 1) : 1;
-          document.getElementById("scoreA").innerText = (scores.A / divider).toFixed(1);
-          document.getElementById("scoreB").innerText = (scores.B / divider).toFixed(1);
-        });
-      }
-    });
-
-    // --- Stav hry ---
-    db.collection("game").doc("state").onSnapshot(doc => {
-      if (doc.exists) {
-        const state = doc.data();
-        const statusText = state.status === "running" ? "Spuštěná" : "Zastavená";
-        document.getElementById("gameStatus").innerText = `${statusText} (dělitel: ${state.divider ?? 1})`;
-      }
-    });
-
-    // --- Výpis všech stanovišť ---
-    db.collection("locations").onSnapshot(snapshot => {
-      const list = document.getElementById("locationsList");
-      list.innerHTML = "";
-      snapshot.forEach(doc => {
-        const li = document.createElement("li");
-        li.innerText = `${doc.id}: ${doc.data().owner}`;
-        list.appendChild(li);
+    // Funkce pro změnu vlastníka
+    function setOwner(team) {
+      db.collection("locations").doc(stationId).update({
+        owner: team
       });
-    });
+    }
   </script>
 </body>
 </html>

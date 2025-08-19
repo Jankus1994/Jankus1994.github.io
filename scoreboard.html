@@ -113,13 +113,13 @@ h1 {
     });
 
     await scoresRef.update({
-      A: scores.A + addA,
-      B: scores.B + addB
+      A: scores.A + addA/10,
+      B: scores.B + addB/10
     });
 
     // Zobrazit skóre s dividerem
-    scoreAEl.textContent = ((scores.A + addA)/divider).toFixed(1);
-    scoreBEl.textContent = ((scores.B + addB)/divider).toFixed(1);
+    scoreAEl.textContent = (scores.A + addA).toFixed(1);
+    scoreBEl.textContent = (scores.B + addB).toFixed(1);
   }, 1000);
 </script>
 </body>

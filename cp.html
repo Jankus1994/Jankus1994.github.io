@@ -140,6 +140,26 @@
         list.appendChild(li);
       });
     });
+
+  // Listener pro stav hry a divider
+  db.collection("game").doc("state").onSnapshot(doc => {
+    const data = doc.data();
+    if (data) {
+      divider = data.divider || 1;
+    }
+  });
+
+  // Listener pro lokace
+  db.collection("locations").onSnapshot(snapshot => {
+    locationsEl.innerHTML = "";
+    snapshot.forEach(doc => {
+      const loc = doc.data();
+      const div = document.createElement("div");
+      div.className = "location owner-" + (loc.owner || "neutral");
+      div.textContent = loc.name + ": " + (loc.owner || "neutral");
+      locationsEl.appendChild(div);
+    });
+  });    
   </script>
 </body>
 </html>

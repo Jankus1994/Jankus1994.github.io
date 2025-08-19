@@ -1,98 +1,84 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin - Domination Game</title>
-<style>
-  body { font-family: Arial, sans-serif; background: #f0f2f5; margin:0; padding:20px; }
-  h1 { text-align:center; }
-  .container { max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);}
-  button { margin: 5px; padding: 10px 15px; border:none; border-radius:5px; cursor:pointer; }
-  button:hover { opacity:0.9; }
-  .start { background:#4CAF50; color:white; }
-  .stop { background:#f44336; color:white; }
-  .reset { background:#2196F3; color:white; }
-  label { display:block; margin-top:15px; }
-  input { width: 60px; padding:5px; margin-left:10px; }
-  #gameStatus { font-weight:bold; margin-top:10px; }
-</style>
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script>
-  // TODO: nahraď svým configem
-  const firebaseConfig = {
+  <meta charset="UTF-8">
+  <title>Admin Panel</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>Admin Panel</h1>
+
+    <div class="card">
+      <h2>Ovládání hry</h2>
+      <p>Stav hry: <span id="gameStatus">Načítám…</span></p>
+      <button onclick="startGame()">Spustit hru</button>
+      <button onclick="stopGame()">Zastavit hru</button>
+      <button onclick="resetGame()">Resetovat hru</button>
+    </div>
+
+    <div class="card">
+      <h2>Nastavení</h2>
+      <label for="divider">Dělitel bodů:</label>
+      <input type="number" id="divider" value="1" min="1">
+      <button onclick="updateDivider()">Nastavit</button>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
       apiKey: "AIzaSyDOEonHWXYZU5bYuETpI_6bk7oIVyHQP1Q",
       authDomain: "domination-game-c1426.firebaseapp.com",
       projectId: "domination-game-c1426",
       storageBucket: "domination-game-c1426.firebasestorage.app",
       messagingSenderId: "630646319",
       appId: "1:630646319:web:8ef916ac9c10ca071a48da"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+    };
 
-  // update stavu hry v UI
-  const statusEl = document.getElementById("gameStatus");
-  db.collection("game").doc("state").onSnapshot(doc => {
-    if(doc.exists){
-      statusEl.textContent = doc.data().status;
-    } else {
-      statusEl.textContent = "stopped"; // default
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // funkce
+    function startGame() {
+      db.collection("game").doc("state").set(
+        { status: "running" }, 
+        { merge: true } // ← vytvoří dokument, pokud není
+      );
     }
-  });
 
-  function startGame() {
-    db.collection("game").doc("state").set(
-      { status: "running" }, 
-      { merge: true }
-    );
-  }
+    function stopGame() {
+      db.collection("game").doc("state").set(
+        { status: "stopped" },
+        { merge: true }
+      );
+    }
 
-  function stopGame() {
-    db.collection("game").doc("state").set(
-      { status: "stopped" }, 
-      { merge: true }
-    );
-  }
-
-  function resetGame() {
-    // reset skóre
-    db.collection("scores").doc("teams").set({ A:0, B:0 });
-
-    // reset všech stanovišť
-    db.collection("locations").get().then(snapshot => {
-      snapshot.forEach(doc => {
-        db.collection("locations").doc(doc.id).set({ owner: "neutral" }, { merge:true });
+    function resetGame() {
+      db.collection("scores").doc("teams").set({ A: 0, B: 0 });
+      db.collection("locations").get().then(snapshot => {
+        snapshot.forEach(doc => {
+          db.collection("locations").doc(doc.id).set(
+            { owner: "neutral" }, 
+            { merge: true }
+          );
+        });
       });
-    });
+      db.collection("game").doc("state").set(
+        { status: "stopped", divider: 1 },
+        { merge: true }
+      );
+    }
 
-    // reset stavu hry a divider
-    db.collection("game").doc("state").set({ status:"stopped", divider:1 }, { merge:true });
-  }
+    function updateDivider() {
+      const divider = parseInt(document.getElementById("divider").value) || 1;
+      db.collection("game").doc("state").set(
+        { divider: divider },
+        { merge: true }
+      );
+    }
 
-  function updateDivider() {
-    const divider = parseInt(document.getElementById("divider").value) || 1;
-    db.collection("game").doc("state").set({ divider:divider }, { merge:true });
-  }
-</script>
-</head>
-<body>
-<div class="container">
-  <h1>Admin - Domination Game</h1>
-  <div>
-    <button class="start" onclick="startGame()">Spustit hru</button>
-    <button class="stop" onclick="stopGame()">Zastavit hru</button>
-    <button class="reset" onclick="resetGame()">Resetovat hru</button>
-  </div>
-
-  <div id="gameStatus">Načítám…</div>
-
-  <label for="divider">Divider (bod každou sekundu / divider):
-    <input type="number" id="divider" value="1" min="1">
-    <button onclick="updateDivider()">Uložit</button>
-  </label>
-</div>
+  </script>
 </body>
 </html>

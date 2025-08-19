@@ -37,25 +37,35 @@
     const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // === Skóre (zobrazené už dělené dividerem) ===
+    // skóre
     db.collection("scores").doc("teams").onSnapshot(doc => {
-      if (!doc.exists) return;
-      const s = doc.data();
-      document.getElementById("scoreA").textContent = ((s.A ?? 0) / divider).toFixed(1);
-      document.getElementById("scoreB").textContent = ((s.B ?? 0) / divider).toFixed(1);
+      if (doc.exists) {
+        const scores = doc.data();
+        db.collection("game").doc("state").get().then(stateDoc => {
+          const divider = stateDoc.exists ? (stateDoc.data().divider ?? 1) : 1;
+          document.getElementById("scoreA").innerText = (scores.A / divider).toFixed(1);
+          document.getElementById("scoreB").innerText = (scores.B / divider).toFixed(1);
+        });
+      }
     });
-    
-    // === Výpis všech stanovišť ===
-    db.collection("locations").onSnapshot(snap => {
-      const grid = document.getElementById("locationsGrid");
-      grid.innerHTML = "";
-      snap.forEach(d => {
-        const data = d.data();
-        const owner = data.owner || "neutral";
-        const el = document.createElement("div");
-        el.className = `tile owner-${owner}`;
-        el.textContent = `${d.id}: ${owner}`;
-        grid.appendChild(el);
+
+    // stav hry
+    db.collection("game").doc("state").onSnapshot(doc => {
+      if (doc.exists) {
+        const state = doc.data();
+        const statusText = state.status === "running" ? "Spuštěná" : "Zastavená";
+        document.getElementById("gameStatus").innerText = `${statusText} (dělitel: ${state.divider ?? 1})`;
+      }
+    });
+
+    // stanoviště
+    db.collection("locations").onSnapshot(snapshot => {
+      const list = document.getElementById("locationsList");
+      list.innerHTML = "";
+      snapshot.forEach(doc => {
+        const li = document.createElement("li");
+        li.innerText = `${doc.id}: ${doc.data().owner}`;
+        list.appendChild(li);
       });
     });
   </script>
